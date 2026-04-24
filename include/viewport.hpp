@@ -1,63 +1,66 @@
-#ifndef VIEWPORT_HPP
-# define VIEWPORT_HPP
+#pragma once
 
-# include "rasterTypes.hpp"
-# include <cstdint>
-# include <string>
-# include <memory>
+#include "rasterTypes.hpp"
+#include "return.hpp"
+#include "viewportManagerType.hpp"
+#include <cstdint>
+#include <string>
+#include <sys/types.h>
+#include <vector>
 
 struct	SDL_Window;
 
-namespace RasterCore {
-
-class	RasterPipeline;
-struct	Scene;
-struct	SharedGpuResources;
 class	ViewportManager;
+
+struct ViewportData {
+	uint32_t						id;
+	std::string						name;
+	uint32_t						width = 0;
+	uint32_t						height = 0;
+	bool							active = false;
+	ViewportRenderMode				activeRenderMode = ViewportRenderMode::Rasterisation;
+	RasterCore::Camera				camera = {};
+	ViewportManager*				viewportManager = nullptr;
+	// intermediete pipeline raster
+	// main pipeline raster
+	// post processing raster
+
+	// intermediate pipeline rt
+	// main pipeline rt
+	// post processing rt
+
+	static ViewportData DefaultRaster() {
+	    return {
+	        1,
+	        "Default",
+	    };
+	}
+
+
+};
 
 class Viewport {
 	private:
-		friend class ViewportManager;
-		struct Impl;
-		std::unique_ptr<Impl> impl_;
-		Viewport(uint32_t id, const std::string& name, uint32_t width, uint32_t height, ViewportOutput outputType, SDL_Window* window = nullptr, SharedGpuResources* sharedResources = nullptr, ViewportManager* viewportManager = nullptr);
+		ViewportData	_data;
 
 	public:
+		Viewport(ViewportData& data);
 		~Viewport();
 
-		Viewport(const Viewport&) = delete;
-		Viewport& operator=(const Viewport&) = delete;
-		Viewport(Viewport&&) noexcept;
-		Viewport& operator=(Viewport&&) noexcept;
-
-		uint32_t		getWidth() const;
-		uint32_t		getHeight() const;
 		uint32_t		getId() const;
 		const std::string& getName() const;
 
-		void setRenderMode(RenderMode mode);
-		RenderMode		getRenderMode() const;
+		Result						setRenderMode(ViewportRenderMode mode);
+		ViewportRenderMode			getRenderMode() const;
 
-		void			setActive(bool active);
-		bool isActive() const;
+		void						setActive(bool active);
+		bool						isActive() const;
 
-		Camera&			getCamera();
-		const Camera& getCamera() const;
 
-		void render();
 
-		RasterPipeline* getPipeline();
-		const RasterPipeline* getPipeline() const;
+		// void						render(); // check (auto run)
 
-		void refreshSharedResources();
+		// raster
 
-		const unsigned char*	getImageData() const;
-		size_t					getImageDataSize() const;
-
-		void*					getVulkanImage() const;
-		void* getVulkanImageView() const;
+		// Result						se`erCamera() const;
 };
-
-}
-
-#endif

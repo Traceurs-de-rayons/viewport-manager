@@ -1,6 +1,5 @@
 #pragma once
 
-#include "rasterTypes.hpp"
 #include <memory>
 #include <string>
 #include <vector>
@@ -8,50 +7,42 @@
 
 struct SDL_Window;
 
-namespace RasterCore {
-
 class Viewport;
+struct ViewportData;
 struct SharedGpuResources;
 
 class ViewportManager {
-public:
-	ViewportManager();
-	~ViewportManager();
+	private:
+		std::vector<std::unique_ptr<Viewport>>	_viewports;
+		uint64_t 								_nextViewportId = 0;
 
-	bool init();
+	public:
+		ViewportManager();
+		~ViewportManager();
 
-	ViewportManager(const ViewportManager&) = delete;
-	ViewportManager& operator=(const ViewportManager&) = delete;
-	ViewportManager(ViewportManager&&) noexcept;
-	ViewportManager& operator=(ViewportManager&&) noexcept;
+		ViewportManager(const ViewportManager&) = delete;
+		ViewportManager& operator=(const ViewportManager&) = delete;
+		ViewportManager(ViewportManager&&) noexcept;
+		ViewportManager& operator=(ViewportManager&&) noexcept;
 
-	Viewport* addViewport(SDL_Window* window, const std::string& name = "");
-	Viewport* addViewport(uint32_t width, uint32_t height, const std::string& name = "");
+		Viewport* addViewport(const ViewportData& data);
 
-	Viewport* getViewport(const std::string& name);
-	Viewport* getViewport(uint32_t id);
+		Viewport* getViewport(const std::string& name);
+		Viewport* getViewport(uint32_t id);
 
-	bool removeViewport(const std::string& name);
-	bool removeViewport(uint32_t id);
+		bool removeViewport(const std::string& name);
+		bool removeViewport(uint32_t id);
 
-	const std::vector<std::unique_ptr<Viewport>>& getViewports() const;
+		const std::vector<std::unique_ptr<Viewport>>& getViewports() const;
 
-	SharedGpuResources* getSharedResources();
-	const SharedGpuResources* getSharedResources() const;
+		size_t getViewportCount() const;
 
-	void setSharedResources(SharedGpuResources* resources);
 
-	void renderAll();
+		// todoo
 
-	void pauseAllViewportTasks();
-	void resumeAllViewportTasks();
+		// void renderAll();
 
-	size_t getViewportCount() const;
-	void check_resize();
+		// void pauseAllViewportTasks();
+		// void resumeAllViewportTasks();
 
-private:
-	struct Impl;
-	std::unique_ptr<Impl> impl_;
 };
-
-}

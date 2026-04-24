@@ -1,195 +1,42 @@
 #include "viewport.hpp"
-#include "viewportImpl.hpp"
+#include "return.hpp"
 #include "rasterCore.hpp"
+
 #include <iostream>
 
-namespace RasterCore {
-
-uint32_t Viewport::Impl::nextId = 0;
-
-Viewport::Impl::Impl(uint32_t id, const std::string& name, uint32_t width, uint32_t height,
-					 ViewportOutput outputType, SDL_Window* window, SharedGpuResources* sharedResources, ViewportManager* viewportManager)
-	: id(id)
-	, name(name)
-	, width(width)
-	, height(height)
-	, outputType(outputType)
-	, window(window)
-	, renderMode(RenderMode::Normal)
-	, active(true)
-	, camera{}
-	, sharedResources(sharedResources)
-	, viewportManager(viewportManager)
+Viewport::Viewport(ViewportData& data) : _data(data)
 {
-	camera.position = {0.0f, 2.0f, 5.0f};
-	camera.target = {0.0f, 0.0f, 0.0f};
-	camera.up = {0.0f, 1.0f, 0.0f};
-	camera.verticalFovDegrees = 60.0f;
-	camera.nearPlane = 0.1f;
-	camera.farPlane = 1000.0f;
+	// Le constructeur est maintenant correctement formaté et
+	// utilise une liste d'initialisation pour _data.
 }
 
-bool Viewport::Impl::initializePipeline() {
-	if (pipeline)
-		return true;
-
-	InitOptions options;
-	options.sharedResources = sharedResources;
-
-	if (outputType == ViewportOutput::Window) {
-		if (!window) {
-			std::cerr << "Viewport: Cannot initialize - no window provided" << std::endl;
-			return false;
-		}
-
-		options.target = OutputTarget::Window;
-		options.window.window = window;
-		options.window.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-		options.window.swapchainImageCount = 3;
-	    } else {
-	        options.target = OutputTarget::Buffer;
-	        options.buffer.width = width;
-	        options.buffer.height = height;
-	        options.buffer.colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
-	    }
-
-	    auto result = initRasterisation(options);
-	if (!result.success || !result.pipeline) {
-		std::cerr << "Viewport: Failed to initialize pipeline: " << result.errorMessage << std::endl;
-		return false;
-	}
-
-	pipeline = result.pipeline;
-	if (viewportManager)
-		pipeline->setViewportManager(viewportManager);
-	else
-        return false;
-	return true;
-}
-
-std::unique_ptr<Viewport> Viewport::Impl::create(uint32_t id, const std::string& name, uint32_t width, uint32_t height, ViewportOutput outputType, SDL_Window* window, SharedGpuResources* sharedResources, ViewportManager* viewportManager) {
-	return std::unique_ptr<Viewport>(new Viewport(id, name, width, height, outputType, window, sharedResources, viewportManager));
-}
-
-Viewport::Viewport(uint32_t id, const std::string& name, uint32_t width, uint32_t height, ViewportOutput outputType, SDL_Window* window, SharedGpuResources* sharedResources, ViewportManager* viewportManager)
-	: impl_(std::make_unique<Impl>(id, name, width, height, outputType, window, sharedResources, viewportManager))
+Viewport::~Viewport()
 {
-	if (impl_) {
-		if (!impl_->initializePipeline()) {
-			std::cerr << "Viewport '" << name << "': Failed to initialize pipeline on creation" << std::endl;
-		}
-	}
-	std::cout << "Viewport '" << impl_->name << "' created (ID: " << impl_->id << ", " << impl_->width << "x" << impl_->height << ")" << std::endl;
-}
-
-Viewport::~Viewport() {
-	if (impl_)
-		std::cout << "Viewport '" << impl_->name << "' destroyed (ID: " << impl_->id << ")" << std::endl;
-}
-
-Viewport::Viewport(Viewport&& other) noexcept : impl_(std::move(other.impl_)) {}
-
-Viewport& Viewport::operator=(Viewport&& other) noexcept {
-	if (this != &other)
-		impl_ = std::move(other.impl_);
-	return *this;
-}
-
-uint32_t Viewport::getWidth() const {
-	return impl_ ? impl_->width : 0;
-}
-
-uint32_t Viewport::getHeight() const {
-	return impl_ ? impl_->height : 0;
+	// Définition du destructeur qui était déclaré dans le .hpp
 }
 
 uint32_t Viewport::getId() const {
-	return impl_ ? impl_->id : 0;
+	return _data.id;
 }
 
 const std::string& Viewport::getName() const {
-	static const std::string empty;
-	return impl_ ? impl_->name : empty;
+	return _data.name;
 }
 
-void Viewport::setRenderMode(RenderMode mode) {
-	if (impl_)
-		impl_->renderMode = mode;
+Result Viewport::setRenderMode(ViewportRenderMode mode) {
+	// À implémenter: vérifier si le mode est valide
+	_data.activeRenderMode = mode;
+	return ((Result){.code = ResultCode::Ok});
 }
 
-RenderMode Viewport::getRenderMode() const {
-	return impl_ ? impl_->renderMode : RenderMode::Normal;
+ViewportRenderMode Viewport::getRenderMode() const {
+	return _data.activeRenderMode;
 }
 
 void Viewport::setActive(bool active) {
-	if (impl_)
-		impl_->active = active;
+	_data.active = active;
 }
 
 bool Viewport::isActive() const {
-	return impl_ ? impl_->active : false;
-}
-
-Camera& Viewport::getCamera() {
-	static Camera dummy;
-	return impl_ ? impl_->camera : dummy;
-}
-
-const Camera& Viewport::getCamera() const {
-	static Camera dummy;
-	return impl_ ? impl_->camera : dummy;
-}
-
-
-void Viewport::render() {
-	if (!impl_ || !impl_->active || !impl_->pipeline)
-		return;
-
-	impl_->pipeline->setCamera(impl_->camera);
-	impl_->pipeline->drawFrame();
-}
-
-RasterPipeline* Viewport::getPipeline() {
-	return impl_ ? impl_->pipeline.get() : nullptr;
-}
-
-const RasterPipeline* Viewport::getPipeline() const {
-	return impl_ ? impl_->pipeline.get() : nullptr;
-}
-
-const unsigned char* Viewport::getImageData() const {
-	if (!impl_ || !impl_->pipeline || impl_->outputType != ViewportOutput::Buffer)
-		return nullptr;
-
-	auto* buffer = impl_->pipeline->deviceBuffer();
-	if (!buffer)
-		return nullptr;
-	return nullptr;
-}
-
-size_t Viewport::getImageDataSize() const {
-	if (!impl_)
-		return 0;
-	return static_cast<size_t>(impl_->width) * impl_->height * 4;
-}
-
-void* Viewport::getVulkanImage() const {
-	if (!impl_ || !impl_->pipeline || impl_->outputType != ViewportOutput::Buffer)
-		return nullptr;
-	return impl_->pipeline->getColorImage();
-}
-
-void* Viewport::getVulkanImageView() const {
-	if (!impl_ || !impl_->pipeline || impl_->outputType != ViewportOutput::Buffer)
-		return nullptr;
-	return impl_->pipeline->getColorImageView();
-}
-
-void Viewport::refreshSharedResources() {
-	if (!impl_ || !impl_->pipeline)
-		return;
-
-	impl_->pipeline->refreshSharedResources();
-}
-
+	return _data.active;
 }
