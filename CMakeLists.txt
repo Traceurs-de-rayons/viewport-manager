@@ -33,6 +33,7 @@ target_include_directories(viewport_manager
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 		${SRC_INCLUDE_DIRS}
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../src/ui>
 		$<INSTALL_INTERFACE:include>
 )
 

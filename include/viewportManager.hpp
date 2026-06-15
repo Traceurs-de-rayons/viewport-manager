@@ -5,7 +5,10 @@
 #include <vector>
 #include <cstdint>
 
+#include "renderDevice.hpp"
+
 struct SDL_Window;
+class ImGuiLayer;
 
 class Viewport;
 struct ViewportData;
@@ -15,6 +18,9 @@ class ViewportManager {
 	private:
 		std::vector<std::unique_ptr<Viewport>>	_viewports;
 		uint64_t 								_nextViewportId = 0;
+		renderApi::device::GPU* 				_gpu = nullptr;
+		renderApi::instance::RenderInstance* 			_vkMainInstance = nullptr;
+		ImGuiLayer*								_imguiLayer = nullptr;
 
 	public:
 		ViewportManager();
@@ -37,7 +43,13 @@ class ViewportManager {
 
 		size_t getViewportCount() const;
 
+		bool init();
+		bool initWorkspace();
+		
+		void setImGuiLayer(ImGuiLayer* layer) { _imguiLayer = layer; }
 
+		renderApi::device::GPU* getGpu() const;
+		
 		// todoo
 
 		// void renderAll();

@@ -1,18 +1,14 @@
 #include "viewport.hpp"
 #include "return.hpp"
-#include "rasterCore.hpp"
 
-#include <iostream>
 
 Viewport::Viewport(ViewportData& data) : _data(data)
 {
-	// Le constructeur est maintenant correctement formaté et
-	// utilise une liste d'initialisation pour _data.
 }
 
 Viewport::~Viewport()
 {
-	// Définition du destructeur qui était déclaré dans le .hpp
+
 }
 
 uint32_t Viewport::getId() const {
