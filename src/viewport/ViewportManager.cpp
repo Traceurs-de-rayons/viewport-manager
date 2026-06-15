@@ -62,11 +62,11 @@ bool ViewportManager::initWorkspace() {
 		std::cerr << "ViewportManager: No ImGuiLayer set, cannot create workspace windows" << std::endl;
 		return false;
 	}
-	
+
 	// Create default workspace windows
-	_imguiLayer->createWindow(ImGuiWindowType::SceneViewport);
-	_imguiLayer->createWindow(ImGuiWindowType::CpuStats);
-	
+	// _imguiLayer->createWindow(WindowType::SceneViewport);
+	// _imguiLayer->createWindow(WindowType::CpuStats);
+
 	std::cout << "ViewportManager: Workspace initialized with default windows" << std::endl;
 	return true;
 }
