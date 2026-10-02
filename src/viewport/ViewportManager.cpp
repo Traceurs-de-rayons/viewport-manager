@@ -2,16 +2,94 @@
 #include "viewport.hpp"
 #include "rasterCore.hpp"
 #include "renderApi.hpp"
-#include "imguiLayer.hpp"
 #include <iostream>
 #include <vulkan/vulkan_core.h>
 
 ViewportManager::ViewportManager() {}
 ViewportManager::~ViewportManager() {}
 
+ViewportManager::ViewportManager(ViewportManager&&) noexcept = default;
+ViewportManager& ViewportManager::operator=(ViewportManager&&) noexcept = default;
+
 Viewport* ViewportManager::addViewport(const ViewportData& data) {
-	(void)data;
+	if (!_gpu) {
+		std::cerr << "ViewportManager: Cannot add viewport - GPU not initialized" << std::endl;
+		return nullptr;
+	}
+
+	ViewportData viewportData = data;
+
+	if (viewportData.name.empty())
+		viewportData.name = "Viewport_" + std::to_string(_nextViewportId);
+
+	if (getViewport(viewportData.name) != nullptr) {
+		std::cerr << "ViewportManager: Viewport '" << viewportData.name << "' already exists" << std::endl;
+		return nullptr;
+	}
+
+	viewportData.id = static_cast<uint32_t>(_nextViewportId++);
+
+	auto viewport = std::make_unique<Viewport>(viewportData, _gpu);
+	Viewport* ptr = viewport.get();
+
+	
+	if (_defaultSceneResources && _defaultSceneResources->isLoaded()) {
+		Result result = ptr->setSceneResources(_defaultSceneResources, _defaultSceneName);
+		if (result.code == ResultCode::Error)
+			std::cerr << "ViewportManager: " << result.message << std::endl;
+	}
+
+	_viewports.push_back(std::move(viewport));
+
+	std::cout << "ViewportManager: Added viewport '" << ptr->getName()
+			  << "' (ID: " << ptr->getId() << ")" << std::endl;
+	return ptr;
+}
+
+Viewport* ViewportManager::getViewport(const std::string& name) {
+	for (auto& viewport : _viewports) {
+		if (viewport && viewport->getName() == name)
+			return viewport.get();
+	}
 	return nullptr;
+}
+
+Viewport* ViewportManager::getViewport(uint32_t id) {
+	for (auto& viewport : _viewports) {
+		if (viewport && viewport->getId() == id)
+			return viewport.get();
+	}
+	return nullptr;
+}
+
+bool ViewportManager::removeViewport(const std::string& name) {
+	for (auto it = _viewports.begin(); it != _viewports.end(); ++it) {
+		if (*it && (*it)->getName() == name) {
+			std::cout << "ViewportManager: Removed viewport '" << name << "'" << std::endl;
+			_viewports.erase(it);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool ViewportManager::removeViewport(uint32_t id) {
+	for (auto it = _viewports.begin(); it != _viewports.end(); ++it) {
+		if (*it && (*it)->getId() == id) {
+			std::cout << "ViewportManager: Removed viewport (ID: " << id << ")" << std::endl;
+			_viewports.erase(it);
+			return true;
+		}
+	}
+	return false;
+}
+
+const std::vector<std::unique_ptr<Viewport>>& ViewportManager::getViewports() const {
+	return _viewports;
+}
+
+size_t ViewportManager::getViewportCount() const {
+	return _viewports.size();
 }
 
 bool ViewportManager::init() {
@@ -23,10 +101,6 @@ bool ViewportManager::init() {
 	config.engineName = "RT - Engine";
 	config.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 	config.apiVersion = VK_API_VERSION_1_3;
-
-	// Validation layers (optionnel - nécessite le SDK Vulkan avec layers)
-	// Si les layers ne sont pas installés, l'instance crée sans
-	// config.layers.push_back("VK_LAYER_KHRONOS_validation");
 
 	InitInstanceResult result = renderApi::initNewInstance(config);
 	if (result != INIT_VK_INSTANCE_SUCCESS) {
@@ -57,48 +131,46 @@ bool ViewportManager::init() {
 	return true;
 }
 
-bool ViewportManager::initWorkspace() {
-	if (!_imguiLayer) {
-		std::cerr << "ViewportManager: No ImGuiLayer set, cannot create workspace windows" << std::endl;
-		return false;
+void ViewportManager::setDefaultScene(RasterCore::SharedGpuResources* resources, const std::string& sceneName) {
+	_defaultSceneResources = resources;
+	_defaultSceneName = sceneName;
+
+	if (!_defaultSceneResources)
+		return;
+
+	
+	for (auto& viewport : _viewports) {
+		if (viewport && !viewport->hasScene()) {
+			Result result = viewport->setSceneResources(_defaultSceneResources, _defaultSceneName);
+			if (result.code == ResultCode::Error)
+				std::cerr << "ViewportManager: " << result.message << std::endl;
+		}
 	}
+}
 
-	// Create default workspace windows
-	// _imguiLayer->createWindow(WindowType::SceneViewport);
-	// _imguiLayer->createWindow(WindowType::CpuStats);
+void ViewportManager::detachScene(RasterCore::SharedGpuResources* resources) {
+	if (!resources)
+		return;
 
-	std::cout << "ViewportManager: Workspace initialized with default windows" << std::endl;
-	return true;
+	for (auto& viewport : _viewports) {
+		if (viewport && viewport->getSceneResources() == resources) {
+			std::cout << "ViewportManager: Detaching viewport '" << viewport->getName()
+					  << "' from scene '" << viewport->getSceneName() << "'" << std::endl;
+			if (_defaultSceneResources && _defaultSceneResources != resources)
+				viewport->setSceneResources(_defaultSceneResources, _defaultSceneName);
+			else
+				viewport->setSceneResources(nullptr, "");
+		}
+	}
+}
+
+void ViewportManager::renderAll() {
+	for (auto& viewport : _viewports) {
+		if (viewport && viewport->isActive())
+			viewport->render();
+	}
 }
 
 renderApi::device::GPU* ViewportManager::getGpu() const {
 	return _gpu;
-}
-
-Viewport* ViewportManager::getViewport(const std::string& name) {
-	(void)name;
-	return nullptr;
-}
-
-Viewport* ViewportManager::getViewport(uint32_t id) {
-	(void)id;
-	return nullptr;
-}
-
-bool ViewportManager::removeViewport(const std::string& name) {
-	(void)name;
-	return true;
-}
-
-bool ViewportManager::removeViewport(uint32_t id) {
-	(void)id;
-	return true;
-}
-
-const std::vector<std::unique_ptr<Viewport>>& ViewportManager::getViewports() const {
-	return _viewports;
-}
-
-size_t ViewportManager::getViewportCount() const {
-	return _viewports.size();
 }

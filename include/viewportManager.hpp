@@ -7,20 +7,22 @@
 
 #include "renderDevice.hpp"
 
-struct SDL_Window;
-class ImGuiLayer;
+
+namespace RasterCore {
+	struct SharedGpuResources;
+}
 
 class Viewport;
 struct ViewportData;
-struct SharedGpuResources;
 
 class ViewportManager {
 	private:
 		std::vector<std::unique_ptr<Viewport>>	_viewports;
-		uint64_t 								_nextViewportId = 0;
-		renderApi::device::GPU* 				_gpu = nullptr;
-		renderApi::instance::RenderInstance* 			_vkMainInstance = nullptr;
-		ImGuiLayer*								_imguiLayer = nullptr;
+		uint64_t								_nextViewportId = 0;
+		renderApi::device::GPU*					_gpu = nullptr;
+		renderApi::instance::RenderInstance*	_vkMainInstance = nullptr;
+		RasterCore::SharedGpuResources*			_defaultSceneResources = nullptr;
+		std::string								_defaultSceneName;
 
 	public:
 		ViewportManager();
@@ -44,17 +46,13 @@ class ViewportManager {
 		size_t getViewportCount() const;
 
 		bool init();
-		bool initWorkspace();
-		
-		void setImGuiLayer(ImGuiLayer* layer) { _imguiLayer = layer; }
+
+		void setDefaultScene(RasterCore::SharedGpuResources* resources, const std::string& sceneName);
+		RasterCore::SharedGpuResources* getDefaultSceneResources() const { return _defaultSceneResources; }
+
+		void detachScene(RasterCore::SharedGpuResources* resources);
+
+		void renderAll();
 
 		renderApi::device::GPU* getGpu() const;
-		
-		// todoo
-
-		// void renderAll();
-
-		// void pauseAllViewportTasks();
-		// void resumeAllViewportTasks();
-
 };

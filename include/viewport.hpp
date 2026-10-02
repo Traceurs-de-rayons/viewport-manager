@@ -4,51 +4,59 @@
 #include "return.hpp"
 #include "viewportManagerType.hpp"
 #include <cstdint>
+#include <memory>
 #include <string>
-#include <sys/types.h>
-#include <vector>
+#include <vulkan/vulkan_core.h>
 
 struct	SDL_Window;
 
 class	ViewportManager;
 
+namespace RasterCore {
+	class RasterPipeline;
+	struct SharedGpuResources;
+}
+
+namespace renderApi::device {
+	struct GPU;
+}
+
 struct ViewportData {
-	uint32_t						id;
+	uint32_t						id = 0;
 	std::string						name;
-	uint32_t						width = 0;
-	uint32_t						height = 0;
-	bool							active = false;
+	uint32_t						width = 1280;
+	uint32_t						height = 720;
+	bool							active = true;
 	ViewportRenderMode				activeRenderMode = ViewportRenderMode::Rasterisation;
 	RasterCore::Camera				camera = {};
-	ViewportManager*				viewportManager = nullptr;
-	// intermediete pipeline raster
-	// main pipeline raster
-	// post processing raster
-
-	// intermediate pipeline rt
-	// main pipeline rt
-	// post processing rt
 
 	static ViewportData DefaultRaster() {
-	    return {
-	        1,
-	        "Default",
-	    };
+		ViewportData data;
+		data.id = 0;
+		data.name = "Default";
+		return data;
 	}
-
-
 };
 
 class Viewport {
 	private:
-		ViewportData	_data;
+		ViewportData							_data;
+		RasterCore::SharedGpuResources*			_sceneResources = nullptr;
+		std::string								_sceneName;
+		renderApi::device::GPU*					_gpu = nullptr;
+		std::shared_ptr<RasterCore::RasterPipeline>	_pipeline;
+
+		bool						initPipeline();
 
 	public:
-		Viewport(ViewportData& data);
+		Viewport(const ViewportData& data, renderApi::device::GPU* gpu);
 		~Viewport();
 
-		uint32_t		getId() const;
-		const std::string& getName() const;
+		Viewport(const Viewport&) = delete;
+		Viewport& operator=(const Viewport&) = delete;
+
+		uint32_t					getId() const;
+		const std::string&			getName() const;
 
 		Result						setRenderMode(ViewportRenderMode mode);
 		ViewportRenderMode			getRenderMode() const;
@@ -56,11 +64,20 @@ class Viewport {
 		void						setActive(bool active);
 		bool						isActive() const;
 
+		Result						setSceneResources(RasterCore::SharedGpuResources* resources, const std::string& sceneName);
+		RasterCore::SharedGpuResources*	getSceneResources() const;
+		const std::string&			getSceneName() const;
+		bool						hasScene() const;
 
+		Result						resize(uint32_t width, uint32_t height);
+		uint32_t					getWidth() const;
+		uint32_t					getHeight() const;
 
-		// void						render(); // check (auto run)
+		void						render();
 
-		// raster
+		void						setCamera(const RasterCore::Camera& camera);
+		RasterCore::Camera&			getCamera();
 
-		// Result						se`erCamera() const;
+		RasterCore::RasterPipeline*	getPipeline() const;
+		VkImageView					getColorImageView() const;
 };

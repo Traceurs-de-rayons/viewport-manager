@@ -33,7 +33,6 @@ target_include_directories(viewport_manager
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 		${SRC_INCLUDE_DIRS}
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../src/ui>
 		$<INSTALL_INTERFACE:include>
 )
 
@@ -56,6 +55,8 @@ target_link_libraries(viewport_manager PUBLIC raster-core render-api scene-core)
 find_package(SDL2 REQUIRED)
 target_link_libraries(viewport_manager PUBLIC SDL2::SDL2)
 
-# Find Vulkan
-find_package(Vulkan REQUIRED)
+# Find Vulkan (uses SDK-based Vulkan::Vulkan from render-api, falls back to find_package)
+if(NOT TARGET Vulkan::Vulkan)
+	find_package(Vulkan REQUIRED)
+endif()
 target_link_libraries(viewport_manager PUBLIC Vulkan::Vulkan)
