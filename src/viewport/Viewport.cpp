@@ -26,6 +26,8 @@ bool Viewport::initPipeline() {
 	options.height = _data.height;
 	options.colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
 	options.sharedResources = _sceneResources;
+	options.graph = _data.graph;
+	options.shaderSearchPaths.insert(options.shaderSearchPaths.begin(), _data.shaderSearchPaths.begin(), _data.shaderSearchPaths.end());
 
 	RasterCore::InitResult result = RasterCore::initRasterisation(options);
 	if (!result.success || !result.pipeline) {

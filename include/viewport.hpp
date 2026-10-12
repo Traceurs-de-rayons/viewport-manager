@@ -1,6 +1,9 @@
 #pragma once
 
+#include <filesystem>
+#include <vector>
 #include "rasterTypes.hpp"
+#include "renderGraph.hpp"
 #include "return.hpp"
 #include "viewportManagerType.hpp"
 #include <cstdint>
@@ -29,6 +32,8 @@ struct ViewportData {
 	bool							active = true;
 	ViewportRenderMode				activeRenderMode = ViewportRenderMode::Rasterisation;
 	RasterCore::Camera				camera = {};
+	RasterCore::RenderGraphConfig	graph = RasterCore::RenderGraphConfig::deferred(); // passes rendered by the viewport
+	std::vector<std::filesystem::path> shaderSearchPaths; // looked into before the default folders of raster-core
 
 	static ViewportData DefaultRaster() {
 		ViewportData data;
