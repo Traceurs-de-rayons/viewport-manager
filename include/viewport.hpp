@@ -73,6 +73,10 @@ class Viewport {
 		RasterCore::SharedGpuResources*	getSceneResources() const;
 		const std::string&			getSceneName() const;
 		bool						hasScene() const;
+		// The scene it shows changed its buffers or textures in place (SceneManager::syncScenes()):
+		// its pipeline reads the new ones, nothing is rebuilt. Only while the caller holds
+		// GPU::GpuTasksMutex.
+		void						refreshSceneBindings();
 
 		Result						resize(uint32_t width, uint32_t height);
 		uint32_t					getWidth() const;

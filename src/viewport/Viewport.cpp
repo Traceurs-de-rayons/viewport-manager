@@ -88,6 +88,11 @@ Result Viewport::setSceneResources(RasterCore::SharedGpuResources* resources, co
 	return Result::ok();
 }
 
+void Viewport::refreshSceneBindings() {
+	if (_pipeline)
+		_pipeline->refreshSceneBindings();
+}
+
 RasterCore::SharedGpuResources* Viewport::getSceneResources() const {
 	return _sceneResources;
 }
